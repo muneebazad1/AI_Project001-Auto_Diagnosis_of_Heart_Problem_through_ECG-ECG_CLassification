@@ -8,8 +8,9 @@ In this Project, we have developed an AI app which processes 12 Lead ECG sensor 
 - gpt-40-mini for report generation
 - streamlit libraries for building dashboard app
 
-Dataset: Authentic real-world data from Phyionet[A large scale 12-lead electrocardiogram database for arrhythmia study], link : https://physionet.org/content/ecg-arrhythmia/1.0.0/WFDBRecords/01/010/#files-panel
-Model: The proposed algorithm for classifying 12-lead ECG with multi-labeling consists of components of data denoising, framing blocking, and dataset balance for data preprocessing and a neural network structure based on ResNet in combination with attention-based bidirectional long short-term memory (BiLSTM)
+##### Dataset: Authentic real-world data from Phyionet[A large scale 12-lead electrocardiogram database for arrhythmia study], link : https://physionet.org/content/ecg-arrhythmia/1.0.0/WFDBRecords/01/010/#files-panel  
+
+##### Model: The proposed algorithm for classifying 12-lead ECG with multi-labeling consists of components of data denoising, framing blocking, and dataset balance for data preprocessing and a neural network structure based on ResNet in combination with attention-based bidirectional long short-term memory (BiLSTM)
 
 ![2](https://github.com/user-attachments/assets/90291a9e-2ca8-4729-84df-7b7a2e80464a)
 ![fcvm-08-616585-g001](https://github.com/user-attachments/assets/111502d9-b909-4125-bf5e-948e02bf5220)  
