@@ -8,6 +8,11 @@ In this Project, we have developed an AI app which processes 12 Lead ECG sensor 
 - gpt-40-mini for report generation
 - streamlit libraries for building dashboard app
 
+## Instructions to Run the code:  
+- In CLI, type streamlite run inference.py
+- If you want to generate reports, must add api key in the beginning of the code, it was removed for security purposes.
+- x10 12 Lead Ecg signals, preserved in .mat files showing sensor data are in data folder. Any of these files can be used to test system. 
+- 
 ##### Dataset: Authentic real-world data from Phyionet[A large scale 12-lead electrocardiogram database for arrhythmia study], link : https://physionet.org/content/ecg-arrhythmia/1.0.0/WFDBRecords/01/010/#files-panel  
 
 ##### Model: The proposed algorithm for classifying 12-lead ECG with multi-labeling consists of components of data denoising, framing blocking, and dataset balance for data preprocessing and a neural network structure based on ResNet in combination with attention-based bidirectional long short-term memory (BiLSTM)
