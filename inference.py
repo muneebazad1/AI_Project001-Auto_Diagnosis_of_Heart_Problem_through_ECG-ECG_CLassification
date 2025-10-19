@@ -228,17 +228,18 @@ if uploaded_file:
 
         # Display results
         if codes:
-            st.success(f"**Diagnosis Codes Detected:** {', '.join(codes)}")
+            # Combine codes and readable names
+            readable_names = [diag_mapping2.get(code, "Unknown Condition") for code in codes]
+            combined_results = [f"{code} → {name}" for code, name in zip(codes, readable_names)]
+        
+            st.success("### Diagnosis Results:")
+            for item in combined_results:
+                st.write(f"- {item}")
+        
+            # Plot probability graph
             plot_predictions(probs, threshold)
         
-            # New Button: Show readable abnormality names
-            if st.button("Show Abnormality Names"):
-                readable_names = [diag_mapping2.get(code, "Unknown Condition") for code in codes]
-                st.subheader("Detected Abnormalities (Readable Names)")
-                for name in readable_names:
-                    st.write(f"- {name}")
-        
-            # Existing GPT-4 report generation
+            # Generate and display explanation report
             with st.spinner("Generating ECG Report..."):
                 explanation = generate_explanations(codes)
                 if explanation:
@@ -251,6 +252,7 @@ if uploaded_file:
         else:
 
             st.error("Analysis failed. Please check input format.")
+
 
 
 
