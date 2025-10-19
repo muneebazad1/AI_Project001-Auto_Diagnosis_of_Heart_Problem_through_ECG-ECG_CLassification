@@ -228,22 +228,22 @@ if uploaded_file:
 
         # Display results
         if codes:
-    st.success(f"**Diagnosis Codes Detected:** {', '.join(codes)}")
-    plot_predictions(probs, threshold)
-
-    # New Button: Show readable abnormality names
-    if st.button("Show Abnormality Names"):
-        readable_names = [diag_mapping2.get(code, "Unknown Condition") for code in codes]
-        st.subheader("Detected Abnormalities (Readable Names)")
-        for name in readable_names:
-            st.write(f"- {name}")
-
-    # Existing GPT-4 report generation
-    with st.spinner("Generating ECG Report..."):
-        explanation = generate_explanations(codes)
-        if explanation:
-            st.subheader("ECG Report Generation")
-            st.markdown(f"```\n{explanation}\n```")
+            st.success(f"**Diagnosis Codes Detected:** {', '.join(codes)}")
+            plot_predictions(probs, threshold)
+        
+            # New Button: Show readable abnormality names
+            if st.button("Show Abnormality Names"):
+                readable_names = [diag_mapping2.get(code, "Unknown Condition") for code in codes]
+                st.subheader("Detected Abnormalities (Readable Names)")
+                for name in readable_names:
+                    st.write(f"- {name}")
+        
+            # Existing GPT-4 report generation
+            with st.spinner("Generating ECG Report..."):
+                explanation = generate_explanations(codes)
+                if explanation:
+                    st.subheader("ECG Report Generation")
+                    st.markdown(f"```\n{explanation}\n```")
                     
         elif probs is not None:
             st.warning("No significant abnormalities detected")
@@ -251,5 +251,6 @@ if uploaded_file:
         else:
 
             st.error("Analysis failed. Please check input format.")
+
 
 
