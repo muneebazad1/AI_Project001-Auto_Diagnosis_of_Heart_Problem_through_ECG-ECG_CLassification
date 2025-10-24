@@ -334,18 +334,20 @@ if uploaded_file:
             plot_predictions(probs, threshold)
         
             # Generate and display explanation report
-            with st.spinner("Generating ECG Report..."):
-                explanation = generate_explanations(codes)
-                if explanation:
-                    st.subheader("ECG Report Generation")
-                    st.markdown(f"```\n{explanation}\n```")
-                    
-        elif probs is not None:
-            st.warning("No significant abnormalities detected")
-            plot_predictions(probs, threshold)
-        else:
+            # Add manual report generation button
+            st.subheader("Report Generation")
+            if st.button("Generate Report"):
+                user_api_key = st.text_input("Enter your OpenAI API key:", type="password")
+                if user_api_key:
+                    openai.api_key = user_api_key
+                    with st.spinner("Generating ECG Report..."):
+                        explanation = generate_explanations(codes)
+                        if explanation:
+                            st.subheader("ECG Report")
+                            st.markdown(f"```\n{explanation}\n```")
+                else:
+                    st.warning("Please enter your OpenAI API key to generate the report.")
 
-            st.error("Analysis failed. Please check input format.")
 
 
 
