@@ -3,6 +3,6 @@ tensorflow
 numpy
 scipy
 matplotlib
+google-genai
 
-openai
 
