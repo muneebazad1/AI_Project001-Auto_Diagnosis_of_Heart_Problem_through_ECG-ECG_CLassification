@@ -256,10 +256,61 @@ def plot_predictions(probs, threshold=0.5):
 # GPT-4 Explanation Function
 # -------------------------------
 # Initialize Gemini client
+# Initialize Gemini client (prefer env var for key)
 client = genai.Client(api_key="AIzaSyBS7_HiYiFFfpP5iCtHjf1-jn-C02B2pTo")
 
+def _extract_text_from_response(resp):
+    """
+    Try a few common response shapes and return a best-effort text string.
+    """
+    # 1) common SDK convenience attribute
+    if hasattr(resp, "text") and resp.text:
+        return resp.text
+
+    # 2) some SDK versions return an 'output' list of content parts
+    try:
+        # resp.output -> list -> each item has 'content' -> list -> each has 'text'
+        out = getattr(resp, "output", None) or (resp.get("output") if isinstance(resp, dict) else None)
+        if out:
+            # try to find first text piece
+            first = out[0]
+            content = first.get("content") if isinstance(first, dict) else getattr(first, "content", None)
+            if content:
+                part = content[0]
+                txt = part.get("text") if isinstance(part, dict) else getattr(part, "text", None)
+                if txt:
+                    return txt
+    except Exception:
+        pass
+
+    # 3) some shapes: resp.candidates[0].content.parts[0].text
+    try:
+        cand = getattr(resp, "candidates", None)
+        if cand:
+            # assume nested object structure
+            c0 = cand[0]
+            # try multiple attribute patterns safely
+            # candidate.content may be list/dict/object
+            content = getattr(c0, "content", None) or (c0.get("content") if isinstance(c0, dict) else None)
+            if content:
+                # content.parts or content[0]
+                parts = getattr(content, "parts", None) or (content if isinstance(content, list) else None)
+                if parts:
+                    p0 = parts[0]
+                    txt = p0.get("text") if isinstance(p0, dict) else getattr(p0, "text", None)
+                    if txt:
+                        return txt
+    except Exception:
+        pass
+
+    # 4) fallback to string representation
+    try:
+        return str(resp)
+    except Exception:
+        return None
+
 def generate_explanations(codes):
-    """Generate ECG Report using Gemini 2.5 Flash Lite"""
+    """Generate ECG Report using Gemini 2.5 Flash Lite (compatible with SDKs that don't accept generation_config)"""
     try:
         conditions = [diag_mapping2.get(code, "Unknown condition") for code in codes]
         if not conditions:
@@ -271,15 +322,15 @@ def generate_explanations(codes):
             "Then provide medical recommendations for a patient diagnosed with these conditions."
         )
 
-        # Generate content using Gemini
+        # Pass max_output_tokens at top-level (many genai SDK versions expect this)
         response = client.models.generate_content(
             model="gemini-2.5-flash-lite",
             contents=prompt,
-            generation_config={"max_output_tokens": 2000}
+            max_output_tokens=2000  # <-- pass directly instead of generation_config
         )
 
-        # Extract response text
-        return response.text
+        explanation_text = _extract_text_from_response(response)
+        return explanation_text
 
     except Exception as e:
         st.error(f"Failed to generate explanations: {str(e)}")
@@ -355,6 +406,7 @@ if uploaded_file:
         else:
 
             st.error("Analysis failed. Please check input format.")
+
 
 
 
