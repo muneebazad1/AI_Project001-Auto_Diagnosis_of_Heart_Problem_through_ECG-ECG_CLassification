@@ -338,19 +338,26 @@ if uploaded_file:
             # Always show key input
             st.subheader("Report Generation")
 
-# Ask for OpenAI API key
+            # Ask for OpenAI API key
             user_api_key = st.text_input("Enter your OpenAI API key:", type="password", key="api_key_input")
             
-            # Automatically generate report if key provided
+            # If user provides a key, try generating a report
             if user_api_key:
                 openai.api_key = user_api_key
-                with st.spinner("Generating ECG Report..."):
-                    explanation = generate_explanations(codes)
+                try:
+                    with st.spinner("Generating ECG Report..."):
+                        explanation = generate_explanations(codes)
+            
                     if explanation:
                         st.subheader("ECG Report")
                         st.markdown(f"```\n{explanation}\n```")
+                    else:
+                        st.warning("No report could be generated. Please check your API key or try again.")
+                except Exception as e:
+                    st.error(f"OpenAI request failed: {str(e)}")
             else:
                 st.info("Please enter your OpenAI API key to generate the report.")
+
 
 
 
