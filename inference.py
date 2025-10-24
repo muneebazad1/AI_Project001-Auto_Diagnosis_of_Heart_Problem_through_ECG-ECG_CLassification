@@ -5,13 +5,13 @@ import scipy.signal as signal
 from scipy.io import loadmat
 import matplotlib.pyplot as plt
 import tempfile, os
-from google import genai
-import inspect
+import openai
 
 # -------------------------------
 # Configuration
 # -------------------------------
 MODEL_PATH = "updated_ecg_multilabel_model_tf.h5"  
+openai.api_key = "sk-abcdef1234567890abcdef1234567890abcdef12"
 
 DIAG_MAPPING = {'10370003': 0, '106068003': 1, '111288001': 2, '11157007': 3, '111975006': 4, '13640000': 5, '164865005': 6, '164873001': 7, '164889003': 8, '164890007': 9, '164896001': 10, '164909002': 11, '164912004': 12, '164917005': 13, '164930006': 14, '164931005': 15, '164934002': 16, '164937009': 17, '164942001': 18, '164947007': 19, '17338001': 20, '17366009': 21, '195042002': 22, '195060002': 23, '195101003': 24, '233892002': 25, '233897008': 26, '233917008': 27, '251120003': 28, '251146004': 29, '251164006': 30, '251166008': 31, '251170000': 32, '251173003': 33, '251180001': 34, '251187003': 35, '251198002': 36, '251199005': 37, '251205003': 38, '251223006': 39, '270492004': 40, '27885002': 41, '284470004': 42, '29320008': 43, '365413008': 44, '39732003': 45, '418818005': 46, '425856008': 47, '426177001': 48, '426183003': 49, '426627000': 50, '426648003': 51, '426664006': 52, '426761007': 53, '426783006': 54, '426995002': 55, '427084000': 56, '427172004': 57, '427393009': 58, '428417006': 59, '428750005': 60, '429622005': 61, '445118002': 62, '445211001': 63, '446358003': 64, '446813000': 65, '47665007': 66, '49578007': 67, '50799005': 68, '54016002': 69, '54329005': 70, '55827005': 71, '55930002': 72, '5609005': 73, '57054005': 74, '59118001': 75, '59931005': 76, '61277005': 77, '61721007': 78, '63593006': 79, '6374002': 80, '65778007': 81, '67741000119109': 82, '67751000119106': 83, '698252002': 84, '713422000': 85, '713426002': 86, '713427006': 87, '733534002': 88, '74390002': 89, '75532003': 90, '77867006': 91, '81898007': 92, '89792004': 93 }
 
@@ -256,207 +256,25 @@ def plot_predictions(probs, threshold=0.5):
 # -------------------------------
 # GPT-4 Explanation Function
 # -------------------------------
-# Initialize Gemini client
-# Initialize Gemini client (prefer env var for key)
-from google import genai
-import streamlit as st
-import inspect
-
-# Init client (use env var in production)
-client = genai.Client(api_key="")
-
-def _extract_text_from_response(resp):
-    """Robust extraction from several SDK response shapes."""
-    # 1) common convenience attr
-    if hasattr(resp, "text") and resp.text:
-        return resp.text
-
-    # 2) resp.output -> list -> content -> text
-    try:
-        out = getattr(resp, "output", None) or (resp.get("output") if isinstance(resp, dict) else None)
-        if out:
-            first = out[0]
-            content = first.get("content") if isinstance(first, dict) else getattr(first, "content", None)
-            if content:
-                # content may be list of parts
-                part = content[0]
-                txt = part.get("text") if isinstance(part, dict) else getattr(part, "text", None)
-                if txt:
-                    return txt
-    except Exception:
-        pass
-
-    # 3) resp.candidates[0].content.parts[0].text
-    try:
-        cand = getattr(resp, "candidates", None) or (resp.get("candidates") if isinstance(resp, dict) else None)
-        if cand:
-            c0 = cand[0]
-            content = getattr(c0, "content", None) or (c0.get("content") if isinstance(c0, dict) else None)
-            if content:
-                parts = getattr(content, "parts", None) or (content if isinstance(content, list) else None)
-                if parts:
-                    p0 = parts[0]
-                    txt = p0.get("text") if isinstance(p0, dict) else getattr(p0, "text", None)
-                    if txt:
-                        return txt
-    except Exception:
-        pass
-
-    # 4) nested .candidates[0].text
-    try:
-        if isinstance(resp, dict):
-            # try some dict paths
-            for path in [
-                ("candidates", 0, "text"),
-                ("candidates", 0, "content", 0, "text"),
-                ("output", 0, "text")
-            ]:
-                cur = resp
-                ok = True
-                for p in path:
-                    if isinstance(p, int):
-                        if isinstance(cur, list) and len(cur) > p:
-                            cur = cur[p]
-                        else:
-                            ok = False
-                            break
-                    else:
-                        if isinstance(cur, dict) and p in cur:
-                            cur = cur[p]
-                        else:
-                            ok = False
-                            break
-                if ok and isinstance(cur, str):
-                    return cur
-    except Exception:
-        pass
-
-    # 5) fallback to str()
-    try:
-        s = str(resp)
-        return s
-    except Exception:
-        return None
-
-def _try_call(fn, *args, **kwargs):
-    """Call fn with args/kwargs and return (success, response_or_exc)."""
-    try:
-        return True, fn(*args, **kwargs)
-    except TypeError as e:
-        # signature mismatch or unexpected kwarg
-        return False, e
-    except Exception as e:
-        # other runtime error (network/auth) - return fail with exception
-        return False, e
-
-def _find_callable_and_invoke(client, model, contents):
-    """
-    Try various client method names and argument shapes.
-    Returns (response, used_signature_str) or (None, error_message).
-    """
-    candidate_methods = []
-    # common method attributes in various SDK versions
-    for attr in ["models.generate_content", "models.generate", "models.generate_text", "generate_content", "generate", "predict"]:
-        # walk attributes like "models.generate_content"
-        parts = attr.split(".")
-        obj = client
-        ok = True
-        for p in parts:
-            if hasattr(obj, p):
-                obj = getattr(obj, p)
-            else:
-                ok = False
-                break
-        if ok and callable(obj):
-            candidate_methods.append((attr, obj))
-
-    # also try top-level client.models if it's directly callable (some versions)
-    if not candidate_methods:
-        # try to access client.models and inspect
-        if hasattr(client, "models"):
-            models_obj = getattr(client, "models")
-            # try to discover any callables on it
-            for name in dir(models_obj):
-                if name.startswith("_"):
-                    continue
-                attr = getattr(models_obj, name)
-                if callable(attr):
-                    candidate_methods.append((f"models.{name}", attr))
-
-    # argument patterns to attempt
-    arg_patterns = [
-        {},  # no extra kwargs
-        {"max_output_tokens": 2000},
-        {"generation_config": {"max_output_tokens": 2000}},
-        {"parameters": {"maxOutputTokens": 2000}},  # camelCase form SDKs sometimes use
-        {"temperature": 0.0},  # try a simple parameter
-        {"max_tokens": 2000},  # some wrappers accept openai-like names
-    ]
-
-    # Always include positional single-argument attempt (contents only) and (model, contents)
-    positional_variants = [
-        (contents,),  # fn(contents)
-        (model, contents),  # fn(model, contents)
-    ]
-
-    # Try all combinations
-    for name, fn in candidate_methods:
-        # try positional variants first
-        for pos in positional_variants:
-            success, resp = _try_call(fn, *pos)
-            if success:
-                return resp, f"{name}(*{pos})"
-        # then try kwargs
-        for kwargs in arg_patterns:
-            success, resp = _try_call(fn, contents, **kwargs) if len(inspect.signature(fn).parameters) > 0 else _try_call(fn, **kwargs)
-            # fallback: try model & contents & kwargs
-            if not success:
-                try:
-                    success2, resp2 = _try_call(fn, model, contents, **kwargs)
-                    if success2:
-                        return resp2, f"{name}(model, contents, {kwargs})"
-                except Exception:
-                    pass
-            if success:
-                return resp, f"{name}(contents, {kwargs})"
-
-    # if nothing worked, return None with message
-    return None, "No compatible client method/signature found."
-
 def generate_explanations(codes):
-    """Generate ECG Report using Gemini (robust multi-signature caller)."""
+    """Generate ECG Report using GPT-4"""
     try:
         conditions = [diag_mapping2.get(code, "Unknown condition") for code in codes]
         if not conditions:
             return None
-
-        prompt = (
-            f"Explain the following heart conditions in medical terms using report language: "
-            f"{', '.join(conditions)}. "
-            "Then provide medical recommendations for a patient diagnosed with these conditions."
+            
+        prompt = f"Explain the following heart conditions in medical terms using report language: {', '.join(conditions)}. "
+        prompt += "Then provide medical recommendations for a patient diagnosed with these conditions."
+        
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": prompt}],
+            max_tokens=2000
         )
-
-        # try to call a compatible method
-        resp, sig_or_err = _find_callable_and_invoke(client, "gemini-2.5-flash-lite", prompt)
-
-        if resp is None:
-            st.error(f"Failed to call Gemini client: {sig_or_err}")
-            return None
-
-        explanation_text = _extract_text_from_response(resp)
-
-        # if extraction failed, show repr of response for debugging
-        if not explanation_text:
-            st.error(f"Unable to extract text from response (used: {sig_or_err}). Response repr shown below.")
-            st.write(repr(resp))
-            return None
-
-        return explanation_text
-
+        return response.choices[0].message.content
     except Exception as e:
         st.error(f"Failed to generate explanations: {str(e)}")
         return None
-
 
 # -------------------------------
 # Streamlit App
@@ -528,6 +346,12 @@ if uploaded_file:
         else:
 
             st.error("Analysis failed. Please check input format.")
+
+
+
+
+
+
 
 
 
