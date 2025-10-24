@@ -336,11 +336,19 @@ if uploaded_file:
             # Add manual report generation button
             # --- Manual Report Generation ---
             # Always show key input
-            user_api_key = st.text_input("Enter your OpenAI API key:", type="password")
+            st.subheader("Report Generation")
+
+            # Persist user input across reruns
+            user_api_key = st.text_input(
+                "Enter your OpenAI API key:", 
+                type="password", 
+                key="api_key_input"
+            )
             
-            # Only generate when both key and button pressed
-            if st.button("Generate Report"):
+            # Button to generate report
+            if st.button("Generate Report", key="generate_report_btn"):
                 if user_api_key:
+                    st.session_state.api_key_entered = user_api_key
                     openai.api_key = user_api_key
                     with st.spinner("Generating ECG Report..."):
                         explanation = generate_explanations(codes)
@@ -348,7 +356,8 @@ if uploaded_file:
                             st.subheader("ECG Report")
                             st.markdown(f"```\n{explanation}\n```")
                 else:
-                    st.warning("Please enter your OpenAI API key before generating the report.")
+                    st.warning("⚠️ Please enter your OpenAI API key before generating the report.")
+
 
 
 
