@@ -337,40 +337,25 @@ if uploaded_file:
             # Manual Report Generation Section (robust state version)
             # -------------------------------
             st.subheader("Report Generation")
+
+            # Ask user for API key before generating
+            user_api_key = st.text_input("Enter your OpenAI API key:", type="password")
             
-            # Initialize session state variables
-            if "report_generated" not in st.session_state:
-                st.session_state.report_generated = False
-            if "report_error" not in st.session_state:
-                st.session_state.report_error = None
-            
-            # Input for OpenAI API key (persists across reruns)
-            user_api_key = st.text_input("Enter your OpenAI API key:", type="password", key="api_key_input")
-            
-            # Only attempt generation if key is provided and report not already generated
-            if user_api_key and not st.session_state.report_generated:
+            if user_api_key:
+                openai.api_key = user_api_key
                 try:
-                    openai.api_key = user_api_key
                     with st.spinner("Generating ECG Report..."):
                         explanation = generate_explanations(codes)
-            
                     if explanation:
-                        st.session_state.report_generated = True
-                        st.session_state.report_error = None
-                        st.session_state.explanation = explanation
+                        st.subheader("ECG Report")
+                        st.markdown(f"```\n{explanation}\n```")
                     else:
-                        st.session_state.report_error = "No report generated. Please check your API key or try again."
+                        st.warning("No report could be generated. Please check your API key or try again.")
                 except Exception as e:
-                    st.session_state.report_error = f"OpenAI request failed: {str(e)}"
-            
-            # Display stored messages after rerun
-            if st.session_state.report_error:
-                st.error(st.session_state.report_error)
-            elif st.session_state.get("explanation"):
-                st.subheader("ECG Report")
-                st.markdown(f"```\n{st.session_state.explanation}\n```")
+                    st.error(f"OpenAI request failed: {str(e)}")
             else:
                 st.info("Please enter your OpenAI API key to generate the report.")
+
 
 
 
