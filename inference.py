@@ -263,7 +263,7 @@ import streamlit as st
 import inspect
 
 # Init client (use env var in production)
-client = genai.Client(api_key="AIzaSyBS7_HiYiFFfpP5iCtHjf1-jn-C02B2pTo")
+client = genai.Client(api_key="")
 
 def _extract_text_from_response(resp):
     """Robust extraction from several SDK response shapes."""
@@ -528,6 +528,7 @@ if uploaded_file:
         else:
 
             st.error("Analysis failed. Please check input format.")
+
 
 
 
