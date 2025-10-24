@@ -5,7 +5,7 @@ import scipy.signal as signal
 from scipy.io import loadmat
 import matplotlib.pyplot as plt
 import tempfile, os
-import openai
+from google import genai
 
 # -------------------------------
 # Configuration
@@ -256,22 +256,32 @@ def plot_predictions(probs, threshold=0.5):
 # -------------------------------
 # GPT-4 Explanation Function
 # -------------------------------
+# Initialize Gemini client
+client = genai.Client(api_key="AIzaSyBS7_HiYiFFfpP5iCtHjf1-jn-C02B2pTo")
+
 def generate_explanations(codes):
-    """Generate ECG Report using GPT-4"""
+    """Generate ECG Report using Gemini 2.5 Flash Lite"""
     try:
         conditions = [diag_mapping2.get(code, "Unknown condition") for code in codes]
         if not conditions:
             return None
-            
-        prompt = f"Explain the following heart conditions in medical terms using report language: {', '.join(conditions)}. "
-        prompt += "Then provide medical recommendations for a patient diagnosed with these conditions."
-        
-        response = openai.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "system", "content": prompt}],
-            max_tokens=2000
+
+        prompt = (
+            f"Explain the following heart conditions in medical terms using report language: "
+            f"{', '.join(conditions)}. "
+            "Then provide medical recommendations for a patient diagnosed with these conditions."
         )
-        return response.choices[0].message.content
+
+        # Generate content using Gemini
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents=prompt,
+            generation_config={"max_output_tokens": 2000}
+        )
+
+        # Extract response text
+        return response.text
+
     except Exception as e:
         st.error(f"Failed to generate explanations: {str(e)}")
         return None
@@ -346,6 +356,7 @@ if uploaded_file:
         else:
 
             st.error("Analysis failed. Please check input format.")
+
 
 
 
